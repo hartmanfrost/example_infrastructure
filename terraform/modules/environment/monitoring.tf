@@ -1,6 +1,6 @@
-#  ┌┬┐┌─┐┌┐┌┬┌┬┐┌─┐┬─┐┬┌┐┌┌─┐
-#  ││││ ││││││ │ │ │├┬┘│││││ ┬
-#  ┴ ┴└─┘┘└┘┴ ┴ └─┘┴└─┴┘└┘└─┘
+#  ┌┌┐┌─┐┌┐┐o┌┐┐┌─┐┬─┐o┌┐┐┌─┐
+#  ││││ │││││ │ │ ││┬┘│││││ ┬
+#  ┘ ┘┘─┘┘└┘┘ ┘ ┘─┘┘└┘┘┘└┘┘─┘
 
 # PCI DSS: CloudWatch alarms for security monitoring
 resource "aws_cloudwatch_metric_alarm" "eks_api_server_errors" {
