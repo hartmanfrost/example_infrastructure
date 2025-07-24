@@ -63,24 +63,6 @@ resource "aws_security_group" "eks_control_plane_additional" {
     cidr_blocks = module.vpc.private_subnets_cidr_blocks
   }
 
-  # EKS: Control plane to worker nodes on port 443 for kubelet
-  egress {
-    description = "Control plane to worker nodes HTTPS"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    security_groups = [aws_security_group.eks_worker_nodes.id]
-  }
-
-  # EKS: Allow outbound to worker nodes on port 10250 for kubelet
-  egress {
-    description     = "Control plane to worker nodes kubelet"
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_worker_nodes.id]
-  }
-
   tags = merge(module.this.tags, {
     Name = "${module.this.name}-eks-control-plane-additional"
   })
@@ -99,24 +81,6 @@ resource "aws_security_group" "eks_worker_nodes" {
     to_port     = 65535
     protocol    = "tcp"
     self        = true
-  }
-
-  # EKS: Control plane to worker kubelets and pods
-  ingress {
-    description     = "Control plane to worker kubelets"
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_control_plane_additional.id]
-  }
-
-  # EKS: Control plane to worker nodes HTTPS  
-  ingress {
-    description     = "Control plane to worker nodes HTTPS"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_control_plane_additional.id]
   }
 
   # EKS: CoreDNS
@@ -145,79 +109,135 @@ resource "aws_security_group" "eks_worker_nodes" {
     cidr_blocks = module.vpc.private_subnets_cidr_blocks
   }
 
-  # EKS: Required outbound to control plane on port 443
-  egress {
-    description     = "Worker nodes to control plane HTTPS"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_control_plane_additional.id]
-  }
-
-  # EKS: Required outbound to control plane on port 10250  
-  egress {
-    description     = "Worker nodes to control plane for logs/exec/port-forward"
-    from_port       = 10250
-    to_port         = 10250
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eks_control_plane_additional.id]
-  }
-
-  # Internet access for pulling images and updates
-  egress {
-    description = "HTTPS outbound for pulling images"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "HTTP outbound for package updates"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # DNS resolution
-  egress {
-    description = "DNS TCP outbound"
-    from_port   = 53
-    to_port     = 53
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    description = "DNS UDP outbound"
-    from_port   = 53
-    to_port     = 53
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # NTP for time synchronization (PCI DSS requirement)
-  egress {
-    description = "NTP outbound"
-    from_port   = 123
-    to_port     = 123
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # Node to node communication
-  egress {
-    description = "Node to node communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    self        = true
-  }
-
   tags = merge(module.this.tags, {
     Name = "${module.this.name}-eks-worker-nodes"
   })
+}
+
+# Separate security group rules to avoid circular dependencies
+
+# Control plane to worker nodes egress rules
+resource "aws_security_group_rule" "control_plane_to_workers_https" {
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_worker_nodes.id
+  security_group_id        = aws_security_group.eks_control_plane_additional.id
+  description              = "Control plane to worker nodes HTTPS"
+}
+
+resource "aws_security_group_rule" "control_plane_to_workers_kubelet" {
+  type                     = "egress"
+  from_port                = 10250
+  to_port                  = 10250
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_worker_nodes.id
+  security_group_id        = aws_security_group.eks_control_plane_additional.id
+  description              = "Control plane to worker nodes kubelet"
+}
+
+# Worker nodes to control plane ingress rules
+resource "aws_security_group_rule" "workers_from_control_plane_kubelet" {
+  type                     = "ingress"
+  from_port                = 10250
+  to_port                  = 10250
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_control_plane_additional.id
+  security_group_id        = aws_security_group.eks_worker_nodes.id
+  description              = "Control plane to worker kubelets"
+}
+
+resource "aws_security_group_rule" "workers_from_control_plane_https" {
+  type                     = "ingress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_control_plane_additional.id
+  security_group_id        = aws_security_group.eks_worker_nodes.id
+  description              = "Control plane to worker nodes HTTPS"
+}
+
+# Worker nodes to control plane egress rules
+resource "aws_security_group_rule" "workers_to_control_plane_https" {
+  type                     = "egress"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_control_plane_additional.id
+  security_group_id        = aws_security_group.eks_worker_nodes.id
+  description              = "Worker nodes to control plane HTTPS"
+}
+
+resource "aws_security_group_rule" "workers_to_control_plane_kubelet" {
+  type                     = "egress"
+  from_port                = 10250
+  to_port                  = 10250
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_control_plane_additional.id
+  security_group_id        = aws_security_group.eks_worker_nodes.id
+  description              = "Worker nodes to control plane for logs/exec/port-forward"
+}
+
+# Worker nodes egress rules for internet access
+resource "aws_security_group_rule" "workers_https_outbound" {
+  type              = "egress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "HTTPS outbound for pulling images"
+}
+
+resource "aws_security_group_rule" "workers_http_outbound" {
+  type              = "egress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "HTTP outbound for package updates"
+}
+
+resource "aws_security_group_rule" "workers_dns_tcp_outbound" {
+  type              = "egress"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "DNS TCP outbound"
+}
+
+resource "aws_security_group_rule" "workers_dns_udp_outbound" {
+  type              = "egress"
+  from_port         = 53
+  to_port           = 53
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "DNS UDP outbound"
+}
+
+resource "aws_security_group_rule" "workers_ntp_outbound" {
+  type              = "egress"
+  from_port         = 123
+  to_port           = 123
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "NTP outbound"
+}
+
+resource "aws_security_group_rule" "workers_node_to_node_outbound" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 65535
+  protocol          = "tcp"
+  self              = true
+  security_group_id = aws_security_group.eks_worker_nodes.id
+  description       = "Node to node communication"
 }
 
 # PCI DSS: Additional security group for database pods

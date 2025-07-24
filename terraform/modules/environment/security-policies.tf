@@ -294,17 +294,15 @@ resource "aws_s3_bucket_versioning" "eks_audit_logs" {
   }
 }
 
-resource "aws_s3_bucket_encryption" "eks_audit_logs" {
+resource "aws_s3_bucket_server_side_encryption_configuration" "eks_audit_logs" {
   bucket = aws_s3_bucket.eks_audit_logs.id
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        kms_master_key_id = aws_kms_key.eks.arn
-        sse_algorithm     = "aws:kms"
-      }
-      bucket_key_enabled = true
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.eks.arn
+      sse_algorithm     = "aws:kms"
     }
+    bucket_key_enabled = true
   }
 }
 
@@ -324,6 +322,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "eks_audit_logs" {
   rule {
     id     = "audit_log_lifecycle"
     status = "Enabled"
+
+    # Add filter to apply to all objects
+    filter {
+      prefix = ""
+    }
 
     # PCI DSS: Transition to cheaper storage after 30 days
     transition {

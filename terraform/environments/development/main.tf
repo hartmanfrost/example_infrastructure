@@ -6,7 +6,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = ">= 6.0.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -18,15 +18,15 @@ terraform {
     }
   }
 
-  # PCI DSS: Use remote state with encryption
-  backend "s3" {
-    # Configure these values according to your setup
-    # bucket = "your-terraform-state-bucket"
-    # key    = "development/eks/terraform.tfstate"
-    # region = "us-west-1"
-    # encrypt = true
-    # kms_key_id = "arn:aws:kms:us-west-1:ACCOUNT:key/KEY-ID"
-  }
+  # # PCI DSS: Use remote state with encryption
+  # backend "s3" {
+  #   # Configure these values according to your setup
+  #   # bucket = "your-terraform-state-bucket"
+  #   # key    = "development/eks/terraform.tfstate"
+  #   # region = "us-west-1"
+  #   # encrypt = true
+  #   # kms_key_id = "arn:aws:kms:us-west-1:ACCOUNT:key/KEY-ID"
+  # }
 }
 
 provider "aws" {
