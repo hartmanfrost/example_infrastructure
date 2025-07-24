@@ -1,4 +1,4 @@
-# KatanaPay Platform - Day 1 Infrastructure
+# PCI DSS Platform - Day 1 Infrastructure
 
 ## Secure, PCI-Aware AWS + Kubernetes Platform for Payment Microservices
 
