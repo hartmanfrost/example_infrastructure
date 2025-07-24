@@ -1,0 +1,70 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfplan.*
+.terraform/
+.terraform.lock.hcl
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Terraform variable files (may contain secrets)
+*.tfvars
+*.tfvars.json
+!terraform.tfvars.example
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+# Exception: include example files
+*.auto.tfvars
+*.auto.tfvars.json
+
+# AWS
+.aws/
+aws-credentials*
+
+# Kubernetes
+kubeconfig*
+*.kubeconfig
+.kube/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security and secrets
+*.pem
+*.key
+*.p12
+*.crt
+*.csr
+secrets.yml
+secrets.yaml
+.env
+.env.local
+.env.*.local
